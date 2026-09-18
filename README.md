@@ -57,15 +57,28 @@ The easiest method is to run:
 Start_HelperDev_macOS.command
 ```
 
-Double-click the file in Finder.
+Double-click `Start_HelperDev_macOS.command` in Finder.
 
-On the first run, the launcher automatically:
+Because the launcher is not distributed through the Mac App Store or signed by an identified Apple developer, macOS may block it the first time it is opened. If this happens, follow these steps:
+
+1. Double-click `Start_HelperDev_macOS.command`.
+2. macOS may display a message saying that Apple could not verify that the file is free of malware. Click **Done**.
+3. Open **System Settings**.
+4. Go to **Privacy & Security**.
+5. Scroll down to the **Security** section.
+6. Find the message stating that `Start_HelperDev_macOS.command` was blocked to protect your Mac.
+7. Click **Open Anyway**.
+8. macOS will display another confirmation dialog. Click **Open Anyway** again.
+9. Approve the action using an administrator's **Touch ID** or click **Use Password...** and enter an administrator password.
+10. The launcher should then be allowed to run.
+
+After the launcher is approved, it automatically:
 
 1. Creates a local Python virtual environment named `.venv`
 2. Installs the dependencies from `requirements.txt`
 3. Starts HelperDev at `http://127.0.0.1:5001`
 
-If macOS refuses to open the launcher, open Terminal in the project folder and run:
+If the launcher still does not open, open Terminal in the project folder and run:
 
 ```bash
 chmod +x Start_HelperDev_macOS.command
