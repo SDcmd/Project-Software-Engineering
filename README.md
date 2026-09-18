@@ -35,6 +35,7 @@ HelperDev is a local Python/FastAPI application for macOS and Windows. It runs i
 
 ```text
 http://127.0.0.1:5001
+```
 Requirements
 
 Before running HelperDev, make sure you have:
