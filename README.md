@@ -35,24 +35,18 @@ HelperDev is a local Python/FastAPI application for macOS and Windows. It runs i
 
 ```text
 http://127.0.0.1:5001
-
-### Requirements
+Requirements
 
 Before running HelperDev, make sure you have:
 
-- Python 3.10 or newer
-- A modern web browser
-- Internet access during the first setup so Python can install the packages in `requirements.txt`
-
----
-
-### macOS
-
-#### Automatic setup
+Python 3.10 or newer
+A modern web browser
+Internet access during the first setup so Python can install the packages in requirements.txt
+macOS
+Automatic setup
 
 The easiest method is to run:
 
-```text
 Start_HelperDev_macOS.command
 
 Double-click the file in Finder.
