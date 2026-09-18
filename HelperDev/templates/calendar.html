@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+{% block title %}Calendar - HelperDev{% endblock %}
+{% block content %}
+<section class="pagehead calendar-pagehead">
+  <div>
+    <span class="eyebrow">Schedule & reminders</span>
+    <h1>Calendar</h1>
+    <p>Click any day to create a task or schedule a reminder without leaving the calendar.</p>
+  </div>
+  <div class="head-actions">
+    <a class="secondary button" href="/projects">Projects</a>
+    <a class="primary button" href="/ready">Ready to Work</a>
+  </div>
+</section>
+
+{% if message %}<div class="alert success">{{ message }}</div>{% endif %}
+{% if error %}<div class="alert error">{{ error }}</div>{% endif %}
+
+{% if reminders %}
+<section class="reminder-panel" aria-label="Reminders due now">
+  <div class="reminder-panel-icon">⏰</div>
+  <div class="reminder-panel-body">
+    <div class="reminder-panel-title">Reminders due now</div>
+    <div class="reminder-list">
+      {% for r in reminders %}
+      <a class="reminder-item" href="/projects/{{ r.project_id }}">
+        <span class="reminder-task-id">{{ '%02d'|format(r.id) }}</span>
+        <span class="reminder-task-title">{{ r.title }}</span>
+        <span class="reminder-project">{{ r.project_name }}</span>
+        <span class="reminder-time">{{ r.reminder_at.replace('T',' ') }}</span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% else %}
+<div class="calendar-status-ok"><span>✓</span> No reminders are due right now.</div>
+{% endif %}
+
+<section class="calendar-card">
+  <div class="calendar-toolbar">
+    <a class="calendar-nav-button" href="/calendar?year={{ prev_year }}&month={{ prev_month }}" aria-label="Previous month">←</a>
+    <div class="calendar-month-title">
+      <span class="calendar-month-kicker">Monthly schedule</span>
+      <h2>{{ month_name }} {{ year }}</h2>
+    </div>
+    <a class="calendar-nav-button" href="/calendar?year={{ next_year }}&month={{ next_month }}" aria-label="Next month">→</a>
+  </div>
+
+  <div class="calendar-legend">
+    <span><i class="legend-dot high-dot"></i> High priority</span>
+    <span><i class="legend-dot medium-dot"></i> Medium priority</span>
+    <span><i class="legend-dot low-dot"></i> Low priority</span>
+    <span class="calendar-click-hint">＋ Click a day to add work</span>
+  </div>
+
+  <div class="calendar-weekdays" aria-hidden="true">
+    {% for name in ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'] %}<div>{{ name }}</div>{% endfor %}
+  </div>
+
+  <div class="calendar-month-grid">
+  {% for week in weeks %}
+    {% for d in week %}
+    <div class="calendar-cell calendar-clickable {% if not d.in_month %}outside{% endif %} {% if d.today %}today{% endif %}"
+         data-date="{{ d.date }}" tabindex="0" role="button" aria-label="Open actions for {{ d.date }}">
+      <div class="calendar-cell-head">
+        <span class="day-number">{{ d.day }}</span>
+        <div class="calendar-cell-actions">
+          {% if d.today %}<span class="today-label">Today</span>{% endif %}
+          <span class="day-add-indicator" aria-hidden="true">＋</span>
+        </div>
+      </div>
+      <div class="calendar-events">
+        {% for t in d.tasks %}
+        <a href="/projects/{{ t.project_id }}" class="calendar-event {{ t.priority.lower() }}" title="{{ '%02d'|format(t.id) }} · {{ t.title }}">
+          <span class="event-topline"><b>{{ '%02d'|format(t.id) }}</b><span class="event-state">{{ t.effective_state.replace('_',' ') }}</span></span>
+          <span class="event-title">{{ t.title }}</span>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  {% endfor %}
+  </div>
+</section>
+
+<!-- Step 1: choose what to create -->
+<div class="modal-backdrop" id="day-action-modal" hidden>
+  <section class="modal-card action-choice-card" role="dialog" aria-modal="true" aria-labelledby="day-action-title">
+    <button type="button" class="modal-close" data-close-modal aria-label="Close">×</button>
+    <span class="modal-kicker">Calendar action</span>
+    <h2 id="day-action-title">What would you like to add?</h2>
+    <p class="modal-date" id="day-action-date-label"></p>
+    <div class="calendar-action-choices">
+      <button type="button" class="calendar-action-choice" id="choose-create-task">
+        <span class="choice-icon">＋</span>
+        <span><b>Create a task</b><small>Use the same task fields available on a project board.</small></span>
+      </button>
+      <button type="button" class="calendar-action-choice" id="choose-create-reminder">
+        <span class="choice-icon">⏰</span>
+        <span><b>Create a task reminder</b><small>Select an existing task and choose a reminder time.</small></span>
+      </button>
+    </div>
+  </section>
+</div>
+
+<!-- Step 2a: create task -->
+<div class="modal-backdrop" id="create-task-modal" hidden>
+  <section class="modal-card form-modal-card" role="dialog" aria-modal="true" aria-labelledby="create-task-title">
+    <button type="button" class="modal-close" data-close-modal aria-label="Close">×</button>
+    <div class="modal-head-row">
+      <div><span class="modal-kicker">New scheduled work</span><h2 id="create-task-title">Create task</h2></div>
+      <span class="modal-date-pill" id="task-date-pill"></span>
+    </div>
+    <form method="post" action="/calendar/tasks" class="calendar-modal-form">
+      <input type="hidden" name="calendar_year" value="{{ year }}">
+      <input type="hidden" name="calendar_month" value="{{ month }}">
+      <label>Project
+        <select name="project_id" required>
+          {% for p in projects %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>Title<input name="title" required placeholder="e.g. Implement password reset"></label>
+      <label>Description<textarea name="description" rows="3" placeholder="Optional notes, acceptance details, or context"></textarea></label>
+      <div class="twocol">
+        <label>Type<select name="task_type">{% for x in task_types %}<option value="{{ x }}">{{ x.replace('_',' ') }}</option>{% endfor %}</select></label>
+        <label>Priority<select name="priority"><option>HIGH</option><option selected>MEDIUM</option><option>LOW</option></select></label>
+      </div>
+      <div class="twocol">
+        <label>Due date<input type="date" name="due_date" id="calendar-task-due-date" required></label>
+        <label>Reminder<input type="datetime-local" name="reminder_at" id="calendar-task-reminder"></label>
+      </div>
+      <label>GitHub issue or pull request <span class="optional">optional</span><input type="url" name="github_url" placeholder="https://github.com/owner/repo/pull/42"></label>
+      <label class="checkbox-row"><input type="checkbox" name="github_auto_complete"><span>Automatically mark this task Done when a linked pull request is merged.</span></label>
+      {% if user.role in ['PROJECT_MANAGER','ADMIN'] %}
+      <label>Assignee
+        <select name="assignee_id"><option value="">Unassigned</option>{% for u in users %}<option value="{{ u.id }}">{{ u.username }} - {{ u.role.replace('_',' ') }}</option>{% endfor %}</select>
+      </label>
+      {% else %}
+      <input type="hidden" name="assignee_id" value="{{ user.id }}">
+      <div class="selfassign">Assigned to you ({{ user.username }})</div>
+      {% endif %}
+      <div class="modal-form-actions"><button type="button" class="secondary" data-back-to-actions>Back</button><button class="primary">Create task</button></div>
+    </form>
+  </section>
+</div>
+
+<!-- Step 2b: create reminder -->
+<div class="modal-backdrop" id="create-reminder-modal" hidden>
+  <section class="modal-card form-modal-card reminder-modal-card" role="dialog" aria-modal="true" aria-labelledby="create-reminder-title">
+    <button type="button" class="modal-close" data-close-modal aria-label="Close">×</button>
+    <div class="modal-head-row">
+      <div><span class="modal-kicker">Existing task</span><h2 id="create-reminder-title">Create reminder</h2></div>
+      <span class="modal-date-pill" id="reminder-date-pill"></span>
+    </div>
+    {% if reminder_candidates %}
+    <form method="post" action="/calendar/reminders" class="calendar-modal-form">
+      <input type="hidden" name="calendar_year" value="{{ year }}">
+      <input type="hidden" name="calendar_month" value="{{ month }}">
+      <label>Task
+        <select name="task_id" required>
+          {% for t in reminder_candidates %}
+          <option value="{{ t.id }}">{{ t.project_name }} · {{ '%02d'|format(t.id) }} {{ t.title }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Reminder date and time<input type="datetime-local" name="reminder_at" id="calendar-reminder-at" required></label>
+      <p class="form-help">The reminder will appear inside HelperDev when this time is reached.</p>
+      <div class="modal-form-actions"><button type="button" class="secondary" data-back-to-actions>Back</button><button class="primary">Schedule reminder</button></div>
+    </form>
+    {% else %}
+    <div class="empty-state-panel"><b>No eligible tasks yet.</b><p>Create an unfinished task first, then return here to schedule a reminder.</p></div>
+    <div class="modal-form-actions"><button type="button" class="secondary" data-back-to-actions>Back</button></div>
+    {% endif %}
+  </section>
+</div>
+
+<script>
+(() => {
+  let selectedDate = null;
+  const actionModal = document.getElementById('day-action-modal');
+  const taskModal = document.getElementById('create-task-modal');
+  const reminderModal = document.getElementById('create-reminder-modal');
+  const allModals = [actionModal, taskModal, reminderModal];
+
+  function prettyDate(iso) {
+    const d = new Date(iso + 'T12:00:00');
+    return d.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+  }
+  function closeAll() {
+    allModals.forEach(m => { if (m) m.hidden = true; });
+    document.body.classList.remove('modal-open');
+  }
+  function showModal(modal) {
+    closeAll();
+    modal.hidden = false;
+    document.body.classList.add('modal-open');
+  }
+  function openDayActions(date) {
+    selectedDate = date;
+    document.getElementById('day-action-date-label').textContent = prettyDate(date);
+    showModal(actionModal);
+  }
+
+  document.querySelectorAll('.calendar-clickable').forEach(cell => {
+    cell.addEventListener('click', event => {
+      if (event.target.closest('a,button,input,select,textarea,label,form')) return;
+      openDayActions(cell.dataset.date);
+    });
+    cell.addEventListener('keydown', event => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        if (event.target !== cell) return;
+        event.preventDefault();
+        openDayActions(cell.dataset.date);
+      }
+    });
+  });
+
+  document.getElementById('choose-create-task').addEventListener('click', () => {
+    const form = taskModal.querySelector('form');
+    form.reset();
+    document.getElementById('calendar-task-due-date').value = selectedDate;
+    document.getElementById('calendar-task-reminder').value = '';
+    document.getElementById('task-date-pill').textContent = prettyDate(selectedDate);
+    showModal(taskModal);
+    setTimeout(() => taskModal.querySelector('input[name="title"]').focus(), 0);
+  });
+
+  document.getElementById('choose-create-reminder').addEventListener('click', () => {
+    document.getElementById('reminder-date-pill').textContent = prettyDate(selectedDate);
+    const field = document.getElementById('calendar-reminder-at');
+    if (field) field.value = selectedDate + 'T09:00';
+    showModal(reminderModal);
+  });
+
+  document.querySelectorAll('[data-close-modal]').forEach(btn => btn.addEventListener('click', closeAll));
+  document.querySelectorAll('[data-back-to-actions]').forEach(btn => btn.addEventListener('click', () => showModal(actionModal)));
+  allModals.forEach(modal => modal && modal.addEventListener('click', event => { if (event.target === modal) closeAll(); }));
+  document.addEventListener('keydown', event => { if (event.key === 'Escape') closeAll(); });
+})();
+</script>
+{% endblock %}

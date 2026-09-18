@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+{% block title %}{{ project.name }} - HelperDev{% endblock %}
+{% block content %}
+<section class="pagehead">
+  <div><a class="backlink" href="/projects">← All projects</a><span class="eyebrow">Project</span><h1>{{ project.name }}</h1><p>{{ project.description }}</p></div>
+  <div class="head-actions"><a class="secondary button" href="#create-task">Create Task</a><a class="secondary button" href="#add-dependency">Add Dependency</a><a class="secondary button" href="/calendar">Calendar</a><a class="primary button" href="/ready">Ready-to-Work queue</a></div>
+</section>
+{% if message %}<div class="alert success">{{ message }}</div>{% endif %}
+{% if error %}<div class="alert error">{{ error }}</div>{% endif %}
+<section class="summary">
+  {% for state,label in [('READY','Ready'),('BLOCKED','Blocked'),('IN_PROGRESS','In progress'),('DONE','Done')] %}
+  <div class="metric state-{{ state.lower() }}"><strong>{{ by_state[state]|length }}</strong><span>{{ label }}</span></div>
+  {% endfor %}
+</section>
+<section class="sortbar">
+  <form method="get" action="/projects/{{ project.id }}">
+    <label>Sort tasks
+      <select name="sort">
+        <option value="priority" {% if sort=='priority' %}selected{% endif %}>Priority</option>
+        <option value="due" {% if sort=='due' %}selected{% endif %}>Due date</option>
+        <option value="title" {% if sort=='title' %}selected{% endif %}>Title</option>
+        <option value="created" {% if sort=='created' %}selected{% endif %}>Created</option>
+      </select>
+    </label>
+    <label>Direction
+      <select name="direction"><option value="asc" {% if direction=='asc' %}selected{% endif %}>Ascending</option><option value="desc" {% if direction=='desc' %}selected{% endif %}>Descending</option></select>
+    </label>
+    <button class="secondary">Apply</button>
+  </form>
+</section>
+<section class="board">
+{% for state,label in [('READY','Ready'),('BLOCKED','Blocked'),('IN_PROGRESS','In Progress'),('DONE','Done')] %}
+  <div class="column state-{{ state.lower() }}">
+    <div class="column-title">
+      <h2>{{ label }}</h2>
+      <div class="column-title-controls">
+        <div class="column-nav" aria-label="Navigate {{ label }} tasks">
+          <button type="button" class="column-nav-button lane-nav-up" aria-label="Previous {{ label }} task" title="Previous task" disabled>
+            <svg class="column-nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4.5 16.8 12 5.4l7.5 11.4-7.5-4.2-7.5 4.2Z"/></svg>
+          </button>
+          <button type="button" class="column-nav-button lane-nav-down" aria-label="Next {{ label }} task" title="Next task" disabled>
+            <svg class="column-nav-icon column-nav-icon-down" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4.5 16.8 12 5.4l7.5 11.4-7.5-4.2-7.5 4.2Z"/></svg>
+          </button>
+        </div>
+        <span class="column-count">{{ by_state[state]|length }}</span>
+      </div>
+    </div>
+    <div class="column-scroll" tabindex="-1">
+    {% for t in by_state[state] %}
+    <article class="task-card">
+      <div class="chips"><span>{{ t.task_type.replace('_',' ') }}</span><span class="priority {{ t.priority.lower() }}">{{ t.priority }}</span>{% if t.overdue %}<span class="overdue-chip">OVERDUE</span>{% endif %}{% if t.reminder_due %}<span class="reminder-chip">REMINDER</span>{% endif %}{% if t.github_url %}<span class="github-chip">GITHUB</span>{% endif %}</div>
+      <h3>{{ '%02d'|format(t.id) }} {{ t.title }}</h3>
+      <p>{{ t.description }}</p>
+      <div class="meta">Assignee: {{ t.assignee or 'Unassigned' }}{% if t.due_date %} · Due: {{ t.due_date }}{% endif %}{% if t.reminder_at %} · Reminder: {{ t.reminder_at.replace('T',' ') }}{% endif %}</div>
+      {% if t.blocker_ids %}<div class="blocker"><b>Blocked by</b> {% for bid in t.blocker_ids %}{{ '%02d'|format(bid) }}{% if not loop.last %}, {% endif %}{% endfor %}</div>{% endif %}
+      {% if t.prerequisites %}<div class="deps"><b>Prerequisites</b>
+        {% for d in t.prerequisites %}
+        <div class="dep-row"><span>{{ '%02d'|format(d.id) }} {{ d.title }}</span>
+          {% if user.role in ['PROJECT_MANAGER','ADMIN'] or t.assignee_id == user.id %}<form method="post" action="/tasks/{{ t.id }}/dependencies/{{ d.id }}/remove"><button class="tiny danger-button">Remove</button></form>{% endif %}
+        </div>{% endfor %}
+      </div>{% endif %}
+      {% if t.github_url %}
+      <div class="github-box">
+        <div class="github-box-main">
+          <span class="github-mark">GH</span>
+          <div>
+            <a href="{{ t.github_url }}" target="_blank" rel="noopener" class="github-link">{{ t.github_repo }} #{{ t.github_number }}</a>
+            <div class="github-subline">{{ 'Pull request' if t.github_kind == 'PULL_REQUEST' else 'Issue' }}{% if t.github_title %} · {{ t.github_title }}{% endif %}</div>
+          </div>
+          <span class="github-state state-{{ (t.github_state or 'not_synced').lower() }}">{{ (t.github_state or 'NOT_SYNCED').replace('_',' ') }}</span>
+        </div>
+        <div class="github-box-foot">
+          {% if t.github_auto_complete %}<span>Auto-complete on PR merge</span>{% endif %}
+          {% if t.github_synced_at %}<span>Synced {{ t.github_synced_at.replace('T',' ') }}</span>{% else %}<span>Not synced yet</span>{% endif %}
+          {% if user.role in ['PROJECT_MANAGER','ADMIN'] or t.assignee_id == user.id %}
+          <form method="post" action="/tasks/{{ t.id }}/github/sync"><button class="tiny github-button">Sync GitHub</button></form>
+          <form method="post" action="/tasks/{{ t.id }}/github/unlink" onsubmit="return confirm('Remove the GitHub link from this task?');"><button class="tiny danger-button">Unlink</button></form>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+      <div class="actions task-actions">
+        {% if t.effective_state == 'READY' and (user.role in ['PROJECT_MANAGER','ADMIN'] or t.assignee_id == user.id) %}<form method="post" action="/tasks/{{ t.id }}/start"><button class="task-action">Start task</button></form>{% endif %}
+        {% if t.effective_state == 'IN_PROGRESS' and (user.role in ['PROJECT_MANAGER','ADMIN'] or t.assignee_id == user.id) %}<form method="post" action="/tasks/{{ t.id }}/complete"><button class="task-action">Complete</button></form>{% endif %}
+        {% if user.role in ['PROJECT_MANAGER','ADMIN'] or t.assignee_id == user.id %}<a class="task-action" href="/tasks/{{ t.id }}/edit">Edit</a><form method="post" action="/tasks/{{ t.id }}/delete" onsubmit="return confirm('Permanently delete {{ '%02d'|format(t.id) }}? Dependency links involving this task will also be removed.');"><button class="task-action">Delete</button></form>{% endif %}
+      </div>
+    </article>
+    {% else %}<div class="empty">No tasks</div>{% endfor %}
+    </div>
+  </div>
+{% endfor %}
+</section>
+<section class="admin-grid">
+  <form method="post" action="/projects/{{ project.id }}/tasks" class="form-panel" id="create-task">
+    <h2>Create task</h2>
+    <p class="muted">Developers can create tasks for themselves. Project managers and administrators can assign tasks to anyone.</p>
+    <label>Title<input name="title" required></label>
+    <label>Description<textarea name="description" rows="2"></textarea></label>
+    <div class="twocol"><label>Type<select name="task_type">{% for x in task_types %}<option value="{{ x }}">{{ x.replace('_',' ') }}</option>{% endfor %}</select></label><label>Priority<select name="priority"><option>HIGH</option><option selected>MEDIUM</option><option>LOW</option></select></label></div>
+    <div class="twocol"><label>Due date<input type="date" name="due_date"></label><label>Reminder<input type="datetime-local" name="reminder_at"></label></div>
+    <label>GitHub issue or pull request <span class="optional">optional</span><input type="url" name="github_url" placeholder="https://github.com/owner/repo/pull/42"></label>
+    <label class="checkbox-row"><input type="checkbox" name="github_auto_complete"><span>Automatically mark this HelperDev task Done when a linked pull request is merged.</span></label>
+    {% if user.role in ['PROJECT_MANAGER','ADMIN'] %}<label>Assignee<select name="assignee_id"><option value="">Unassigned</option>{% for u in users %}<option value="{{ u.id }}">{{ u.username }} - {{ u.role.replace('_',' ') }}</option>{% endfor %}</select></label>{% else %}<input type="hidden" name="assignee_id" value="{{ user.id }}"><div class="selfassign">Assigned to you ({{ user.username }})</div>{% endif %}
+    <button class="primary">Create task</button>
+  </form>
+  <form method="post" action="{{ '/tasks/' ~ tasks[0].id ~ '/dependencies' if tasks else '#' }}" class="form-panel" id="add-dependency">
+    <h2>Add dependency</h2>
+    <p class="muted">A task becomes Ready only when all of its prerequisites are Done.</p>
+    {% if tasks|length >= 2 %}
+    <label>Task<select id="dep-task" onchange="document.getElementById('add-dependency').action='/tasks/'+this.value+'/dependencies'">{% for t in tasks %}{% if user.role in ['PROJECT_MANAGER','ADMIN'] or t.assignee_id == user.id %}<option value="{{ t.id }}">{{ '%02d'|format(t.id) }} {{ t.title }}</option>{% endif %}{% endfor %}</select></label>
+    <label>Depends on<select name="prerequisite_id">{% for t in tasks %}<option value="{{ t.id }}">{{ '%02d'|format(t.id) }} {{ t.title }}</option>{% endfor %}</select></label>
+    <button class="primary">Add dependency</button>
+    {% else %}<p>Create at least two tasks before defining a dependency.</p>{% endif %}
+  </form>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(() => {
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  document.querySelectorAll('.column').forEach((column) => {
+    const viewport = column.querySelector('.column-scroll');
+    const up = column.querySelector('.lane-nav-up');
+    const down = column.querySelector('.lane-nav-down');
+    if (!viewport || !up || !down) return;
+
+    const cards = () => Array.from(viewport.querySelectorAll(':scope > .task-card'));
+    const maxScroll = () => Math.max(0, viewport.scrollHeight - viewport.clientHeight);
+    const canNavigate = () => cards().length > 1 && maxScroll() > 2;
+
+    const updateButtons = () => {
+      const enabled = canNavigate();
+      const current = viewport.scrollTop;
+      const max = maxScroll();
+      up.disabled = !enabled || current <= 2;
+      down.disabled = !enabled || current >= max - 2;
+      column.classList.toggle('has-hidden-tasks', enabled);
+    };
+
+    const cardPositions = () => {
+      const viewportTop = viewport.getBoundingClientRect().top;
+      const currentScroll = viewport.scrollTop;
+      return cards().map((card) => ({
+        card,
+        top: card.getBoundingClientRect().top - viewportTop + currentScroll
+      }));
+    };
+
+    const move = (direction) => {
+      if (!canNavigate()) return;
+      const current = viewport.scrollTop;
+      const positions = cardPositions();
+      let target;
+
+      if (direction > 0) {
+        target = positions.find((item) => item.top > current + 8);
+        if (!target) {
+          viewport.scrollTo({top: maxScroll(), behavior: reducedMotion ? 'auto' : 'smooth'});
+        } else {
+          viewport.scrollTo({top: Math.min(target.top, maxScroll()), behavior: reducedMotion ? 'auto' : 'smooth'});
+        }
+      } else {
+        target = [...positions].reverse().find((item) => item.top < current - 8);
+        viewport.scrollTo({top: target ? Math.max(0, target.top) : 0, behavior: reducedMotion ? 'auto' : 'smooth'});
+      }
+    };
+
+    up.addEventListener('click', () => move(-1));
+    down.addEventListener('click', () => move(1));
+    viewport.addEventListener('scroll', updateButtons, {passive:true});
+
+    if ('ResizeObserver' in window) {
+      const observer = new ResizeObserver(updateButtons);
+      observer.observe(viewport);
+      cards().forEach((card) => observer.observe(card));
+    } else {
+      window.addEventListener('resize', updateButtons);
+    }
+
+    requestAnimationFrame(updateButtons);
+  });
+})();
+</script>
+{% endblock %}

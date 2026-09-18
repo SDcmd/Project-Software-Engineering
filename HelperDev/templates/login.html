@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Login - HelperDev{% endblock %}
+{% block content %}
+<section class="login-card">
+  <div>
+    <span class="eyebrow">Developer task management</span>
+    <h1>Manage Work Better.</h1>
+    <p>HelperDev helps you manage tasks so that you can focus on development without worrying about organisation.</p>
+  </div>
+  <form method="post" action="/login" class="form-panel auth-panel">
+    <h2>Sign in</h2>
+    {% if error %}<div class="alert error">{{ error }}</div>{% endif %}
+    <label>Username<input name="username" value="dev" autocomplete="username" required></label>
+    <label>Password<input type="password" name="password" value="dev123" autocomplete="current-password" required></label>
+    <button class="primary auth-primary" type="submit">Sign in</button>
+    <div class="auth-divider"><span>or</span></div>
+    <a class="secondary button auth-secondary" href="/register">Create a new account</a>
+    <div class="demo-accounts" aria-label="Demo account instructions">
+      <strong>Demo accounts</strong>
+      <p>Use one of these accounts to test each role:</p>
+      <div class="demo-account-row"><span class="demo-role">Developer</span><span>Username: <code>dev</code></span><span>Password: <code>dev123</code></span></div>
+      <div class="demo-account-row"><span class="demo-role">Project Manager</span><span>Username: <code>pm</code></span><span>Password: <code>pm123</code></span></div>
+      <div class="demo-account-row"><span class="demo-role">Administrator</span><span>Username: <code>admin</code></span><span>Password: <code>admin123</code></span></div>
+    </div>
+  </form>
+</section>
+{% endblock %}

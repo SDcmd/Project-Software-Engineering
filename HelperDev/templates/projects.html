@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Projects - HelperDev{% endblock %}
+{% block content %}
+<section class="pagehead">
+  <div><span class="eyebrow">Workspace</span><h1>Projects</h1><p>Open a software-development project or create a new one.</p></div>
+  <a class="secondary button" href="/calendar">Open calendar</a>
+</section>
+{% if message %}<div class="alert success">{{ message }}</div>{% endif %}
+{% if error %}<div class="alert error">{{ error }}</div>{% endif %}
+{% if reminders %}
+<div class="alert reminder"><b>{{ reminders|length }} reminder{{ '' if reminders|length == 1 else 's' }} due:</b>
+{% for r in reminders[:3] %} {{ '%02d'|format(r.id) }} {{ r.title }}{% if not loop.last %};{% endif %}{% endfor %}
+{% if reminders|length > 3 %} and {{ reminders|length - 3 }} more{% endif %}. <a href="/calendar">View calendar</a></div>
+{% endif %}
+<section class="project-grid">
+{% for p in projects %}
+<a class="project-card" href="/projects/{{ p.id }}">
+  <span class="eyebrow">Project {{ p.id }}</span><h2>{{ p.name }}</h2>
+  <p>{{ p.description or 'No description.' }}</p>
+  <div class="project-meta">{{ p.task_count }} active task{{ '' if p.task_count == 1 else 's' }}</div>
+</a>
+{% else %}<div class="empty large">No projects exist yet.</div>{% endfor %}
+</section>
+<section class="single-form">
+<form method="post" action="/projects" class="form-panel">
+  <h2>Create project</h2>
+  <label>Name<input name="name" placeholder="e.g. Checkout Refactor" required></label>
+  <label>Description<textarea name="description" rows="3" placeholder="Short project purpose"></textarea></label>
+  <button class="primary">Create project</button>
+</form>
+</section>
+{% endblock %}

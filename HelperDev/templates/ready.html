@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Ready to Work - HelperDev{% endblock %}
+{% block content %}
+<section class="pagehead"><div><span class="eyebrow">Distinct feature 1</span><h1>Ready to Work</h1><p>Actionable tasks assigned to you whose prerequisites are complete, sorted by priority and then due date.</p></div><div class="head-actions"><a class="secondary button" href="/projects">Projects</a><a class="secondary button" href="/calendar">Calendar</a></div></section>
+{% if reminders %}<div class="alert reminder"><b>Reminder due:</b> {% for r in reminders %}{{ '%02d'|format(r.id) }} {{ r.title }}{% if not loop.last %}; {% endif %}{% endfor %}</div>{% endif %}
+<section class="ready-list">
+{% for t in tasks %}<article class="ready-row"><div class="ready-icon">✓</div><div><div class="chips"><span>{{ t.task_type.replace('_',' ') }}</span><span class="priority {{ t.priority.lower() }}">{{ t.priority }}</span>{% if t.due_date %}<span>DUE {{ t.due_date }}</span>{% endif %}</div><h2>{{ '%02d'|format(t.id) }} {{ t.title }}</h2><p><a href="/projects/{{ t.project_id }}">{{ t.project_name }}</a> · {{ t.description }}</p></div><form method="post" action="/tasks/{{ t.id }}/start"><button class="primary">Start task</button></form></article>
+{% else %}<div class="empty large">Nothing is ready right now. Finish or unblock prerequisites first.</div>{% endfor %}
+</section>
+{% endblock %}

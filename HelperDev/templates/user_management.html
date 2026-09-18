@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}User Management - HelperDev{% endblock %}
+{% block content %}
+<section class="pagehead">
+  <div>
+    <span class="eyebrow">Administrator</span>
+    <h1>User Management</h1>
+    <p>Review HelperDev accounts and assign application roles. Public registration always creates Developer accounts.</p>
+  </div>
+  <a class="secondary button" href="/projects">Back to projects</a>
+</section>
+
+{% if message %}<div class="alert success">{{ message }}</div>{% endif %}
+{% if error %}<div class="alert error">{{ error }}</div>{% endif %}
+
+<section class="security-note">
+  <strong>Role administration is server-enforced.</strong>
+  <span>Only Administrators can open this page or submit role changes. HelperDev also prevents the final Administrator account from being demoted.</span>
+</section>
+
+<section class="user-management-card">
+  <div class="user-management-head">
+    <div>
+      <h2>Accounts</h2>
+      <p>{{ users|length }} registered account{{ '' if users|length == 1 else 's' }}</p>
+    </div>
+    <div class="role-key">
+      <span><b>Developer</b> own assigned tasks</span>
+      <span><b>Project Manager</b> any task</span>
+      <span><b>Administrator</b> any task + user roles</span>
+    </div>
+  </div>
+
+  <div class="user-table-wrap">
+    <table class="user-table">
+      <thead>
+        <tr><th>Username</th><th>Current role</th><th>Change role</th><th>Access summary</th></tr>
+      </thead>
+      <tbody>
+        {% for account in users %}
+        <tr>
+          <td>
+            <strong>{{ account.username }}</strong>
+            {% if account.id == user.id %}<span class="you-badge">You</span>{% endif %}
+          </td>
+          <td><span class="role-badge role-{{ account.role.lower() }}">{{ account.role.replace('_',' ') }}</span></td>
+          <td>
+            <form method="post" action="/admin/users/{{ account.id }}/role" class="role-form">
+              <select name="role" aria-label="Role for {{ account.username }}">
+                {% for role_name in role_options %}
+                <option value="{{ role_name }}" {% if role_name == account.role %}selected{% endif %}>{{ role_name.replace('_',' ') }}</option>
+                {% endfor %}
+              </select>
+              <button class="secondary" type="submit">Update</button>
+            </form>
+          </td>
+          <td class="access-summary">
+            {% if account.role == 'DEVELOPER' %}Own assigned tasks only
+            {% elif account.role == 'PROJECT_MANAGER' %}Manage and assign any task
+            {% else %}Manage any task and administer user roles{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

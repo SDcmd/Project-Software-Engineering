@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Create Account - HelperDev{% endblock %}
+{% block content %}
+<section class="login-card">
+  <div>
+    <span class="eyebrow">Create your HelperDev account</span>
+    <h1>Start Organising Better.</h1>
+    <p>Create a personal Developer account. Your account and tasks are stored locally in HelperDev's SQLite database.</p>
+  </div>
+  <form method="post" action="/register" class="form-panel auth-panel">
+    <h2>Create account</h2>
+    {% if error %}<div class="alert error">{{ error }}</div>{% endif %}
+    <label>Username
+      <input
+        name="username"
+        value="{{ username or '' }}"
+        minlength="3"
+        maxlength="32"
+        pattern="[A-Za-z0-9._-]{3,32}"
+        title="Use 3-32 characters: letters, numbers, dots, underscores, or hyphens. Spaces are not allowed."
+        placeholder="e.g. new_user"
+        autocomplete="username"
+        {% if error_field == 'username' %}class="field-invalid" aria-invalid="true" autofocus{% endif %}
+        required>
+    </label>
+    <p class="field-help">3-32 characters. Letters, numbers, dots, underscores and hyphens only. <strong>No spaces.</strong></p>
+    <label>Password
+      <input
+        type="password"
+        name="password"
+        minlength="8"
+        maxlength="128"
+        autocomplete="new-password"
+        {% if error_field == 'password' %}class="field-invalid" aria-invalid="true" autofocus{% endif %}
+        required>
+    </label>
+    <p class="field-help">8-128 characters.</p>
+    <label>Confirm password
+      <input
+        type="password"
+        name="confirm_password"
+        minlength="8"
+        maxlength="128"
+        autocomplete="new-password"
+        {% if error_field == 'confirm_password' %}class="field-invalid" aria-invalid="true" autofocus{% endif %}
+        required>
+    </label>
+    <div class="account-role-note">
+      <strong>Account role: Developer</strong>
+      <span>Self-service registration cannot create Project Manager or Administrator accounts.</span>
+    </div>
+    <button class="primary auth-primary" type="submit">Create account</button>
+    <a class="auth-back-link" href="/login">Already have an account? Sign in</a>
+  </form>
+</section>
+{% endblock %}

@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Edit {{ '%02d'|format(task.id) }} - HelperDev{% endblock %}
+{% block content %}
+<section class="pagehead"><div><span class="eyebrow">Task management</span><h1>Edit {{ '%02d'|format(task.id) }}</h1><p>Update the task, schedule and reminder.</p></div><a class="secondary button" href="/projects/{{ task.project_id }}">Back to board</a></section>
+{% if error %}<div class="alert error">{{ error }}</div>{% endif %}
+<section class="single-form"><form method="post" action="/tasks/{{ task.id }}/edit" class="form-panel">
+  <label>Title<input name="title" value="{{ task.title }}" required></label>
+  <label>Description<textarea name="description" rows="4">{{ task.description }}</textarea></label>
+  <div class="twocol"><label>Type<select name="task_type">{% for x in task_types %}<option value="{{ x }}" {% if x == task.task_type %}selected{% endif %}>{{ x.replace('_',' ') }}</option>{% endfor %}</select></label><label>Priority<select name="priority">{% for x in priorities %}<option value="{{ x }}" {% if x == task.priority %}selected{% endif %}>{{ x }}</option>{% endfor %}</select></label></div>
+  <div class="twocol"><label>Due date<input type="date" name="due_date" value="{{ task.due_date or '' }}"></label><label>Reminder<input type="datetime-local" name="reminder_at" value="{{ task.reminder_at or '' }}"></label></div>
+  <label>GitHub issue or pull request <span class="optional">optional</span><input type="url" name="github_url" value="{{ task.github_url or '' }}" placeholder="https://github.com/owner/repo/pull/42"></label>
+  <label class="checkbox-row"><input type="checkbox" name="github_auto_complete" {% if task.github_auto_complete %}checked{% endif %}><span>Automatically mark this HelperDev task Done when a linked pull request is merged.</span></label>
+  {% if task.github_url %}<div class="github-edit-note">Current link: <a href="{{ task.github_url }}" target="_blank" rel="noopener">{{ task.github_repo }} #{{ task.github_number }}</a> · {{ (task.github_state or 'NOT_SYNCED').replace('_',' ') }}</div>{% endif %}
+  {% if user.role in ['PROJECT_MANAGER','ADMIN'] %}<label>Assignee<select name="assignee_id"><option value="">Unassigned</option>{% for u in users %}<option value="{{ u.id }}" {% if task.assignee_id == u.id %}selected{% endif %}>{{ u.username }} - {{ u.role.replace('_',' ') }}</option>{% endfor %}</select></label>{% else %}<input type="hidden" name="assignee_id" value="{{ user.id }}"><div class="selfassign">Assigned to you ({{ user.username }})</div>{% endif %}
+  <button class="primary">Save changes</button>
+</form></section>
+{% endblock %}

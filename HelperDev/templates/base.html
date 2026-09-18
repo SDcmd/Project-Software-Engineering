@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{% block title %}HelperDev{% endblock %}</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="/projects"><span class="brandmark">HD</span> HelperDev</a>
+  {% if user %}
+  <nav><a href="/projects">Projects</a><a href="/ready">Ready to Work</a><a href="/calendar">Calendar</a>{% if user.role == 'ADMIN' %}<a href="/admin/users">User Management</a>{% endif %}</nav>
+  <div class="userbox"><span>{{ user.username }}</span><span class="role">{{ user.role.replace('_',' ') }}</span><form method="post" action="/switch-account"><button class="switch-account-btn" type="submit" title="Sign out and return to the login page">Switch Account</button></form><form method="post" action="/logout"><button class="linkbtn" type="submit">Sign out</button></form></div>
+  {% endif %}
+</header>
+<main class="shell">{% block content %}{% endblock %}</main>
+<button id="back-to-top" class="back-to-top" type="button" aria-label="Back to top" title="Back to top">
+  <svg class="back-to-top-icon" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+    <defs>
+      <mask id="backToTopCutout" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+        <rect x="0" y="0" width="64" height="64" fill="white"/>
+        <path d="M18 30 L32 16 L46 30 M32 17 V47" fill="none" stroke="black" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+      </mask>
+    </defs>
+    <circle class="back-to-top-disc" cx="32" cy="32" r="29" mask="url(#backToTopCutout)"/>
+    <circle class="back-to-top-ring" cx="32" cy="32" r="29"/>
+    <path class="back-to-top-arrow-glow" d="M18 30 L32 16 L46 30 M32 17 V47"/>
+  </svg>
+</button>
+{% block scripts %}{% endblock %}
+<script>
+(() => {
+  const button = document.getElementById('back-to-top');
+  if (!button) return;
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const sync = () => button.classList.toggle('is-visible', window.scrollY > 120);
+  window.addEventListener('scroll', sync, {passive:true});
+  button.addEventListener('click', () => window.scrollTo({top:0, behavior:reducedMotion ? 'auto' : 'smooth'}));
+  sync();
+})();
+</script>
+</body>
+</html>
